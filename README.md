@@ -1,99 +1,187 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Kreeda Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Kreeda backend monorepo built with NestJS.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Overview
 
-## Description
+This repository now contains:
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- `apps/service`: Main backend API service
+- `libs/common`: Shared entities/types for PostgreSQL and MongoDB models
+- `api-test-client`: React + Vite app for testing Google auth API flow
 
-## Project setup
+## Tech Stack
 
-```bash
-$ pnpm install
-```
+- NestJS 11 + TypeScript
+- PostgreSQL + TypeORM (users/auth provider)
+- MongoDB + Mongoose (media/posts)
+- Google OAuth token verification
+- JWT auth guard for protected APIs
+- Google Cloud Storage signed upload flow
+- Swagger/OpenAPI docs
 
-## Compile and run the project
+## Prerequisites
+
+- Node.js 20+
+- pnpm 9+
+- PostgreSQL instance
+- MongoDB instance
+- Google Cloud Storage bucket + service account credentials
+
+## Installation
+
+From repository root:
 
 ```bash
-# development
-$ pnpm run start
-
-# watch mode
-$ pnpm run start:dev
-
-# production mode
-$ pnpm run start:prod
+pnpm install -r
 ```
 
-## Run tests
+## Generate JWT Keys
+
+Run from repository root (or any directory where you want key files):
 
 ```bash
-# unit tests
-$ pnpm run test
-
-# e2e tests
-$ pnpm run test:e2e
-
-# test coverage
-$ pnpm run test:cov
+openssl genrsa -out private.pem 2048
+openssl rsa -in private.pem -pubout -out public.pem
 ```
 
-## Deployment
+## Environment Variables
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+Service env file path:
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+- `apps/service/.env`
+
+Required:
+
+```env
+ENVIRONMENT=local
+PORT=3000
+LOG_LEVEL=info
+
+PG_URI=postgres://<user>:<password>@<host>:5432/<db_name>
+MONGODB_URI=mongodb://<user>:<password>@<host>:27017/<db_name>
+TRUST_PROXY=false
+
+GOOGLE_CLIENT_ID=<google_oauth_client_id>
+GOOGLE_CLIENT_SECRET=<google_oauth_client_secret>
+
+JWT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+JWT_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----\n"
+ACCESS_TOKEN_TTL=15MINUTE
+REFRESH_TTL_DAYS=30
+ABSOLUTE_TTL_DAYS=90
+
+GCP_PROJECT_ID=<gcp_project_id>
+GCP_BUCKET_NAME=<bucket_name>
+GCP_CLIENT_EMAIL=<service_account_email>
+GCP_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----\\n"
+MEDIA_BASE_URL=https://storage.googleapis.com/<bucket_name>
+```
+
+Notes:
+
+- `ENVIRONMENT`: `local` | `development` | `production`
+- `LOG_LEVEL`: `error` | `warn` | `info` | `http` | `verbose` | `debug` | `silly`
+- `TRUST_PROXY`: `false`, `true`, proxy hop count like `1`, or subnet string
+- `ACCESS_TOKEN_TTL`: `<number>MINUTE` | `<number>HOUR` | `<number>DAY`
+- `GCP_PRIVATE_KEY` should preserve newline escapes (`\\n`) in `.env`
+
+## Run Backend Service
+
+From repository root:
 
 ```bash
-$ pnpm install -g mau
-$ mau deploy
+pnpm run start:dev
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Other scripts:
 
-## Resources
+```bash
+pnpm run start
+pnpm run start:debug
+pnpm run build
+pnpm run start:prod
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+Service URL:
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+- `http://localhost:<PORT>`
+- Swagger docs: `http://localhost:<PORT>/docs`
 
-## Support
+## API Endpoints (Current)
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+Frontend integration guide:
 
-## Stay in touch
+- [docs/FRONTEND_API_FLOW.md](docs/FRONTEND_API_FLOW.md)
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+Public:
+
+- `GET /`
+- `POST /auth/google`
+- `POST /auth/refresh`
+- `POST /auth/logout`
+
+Protected (Bearer token required):
+
+- `POST /media/initiate`
+- `POST /media/:id/complete`
+- `POST /posts/`
+
+### Auth Example
+
+```bash
+curl -X POST http://localhost:3000/auth/google \
+  -H 'Content-Type: application/json' \
+  -d '{"idToken":"<google-id-token>"}'
+```
+
+### Media Upload Flow
+
+1. Call `POST /media/initiate` with `filename` and `mimeType`.
+2. Use returned signed policy (`upload.url`, `upload.fields`) to upload directly to GCS.
+3. Call `POST /media/:id/complete` to verify and finalize media state.
+4. Create post with `POST /posts/` using the returned `mediaId`.
+
+## Data Layer
+
+PostgreSQL (TypeORM):
+
+- `users`
+- `auth_providers`
+
+MongoDB (Mongoose collections):
+
+- `media`
+- `posts`
+
+## Quality Commands
+
+```bash
+pnpm run lint
+pnpm run format
+pnpm run test
+pnpm run test:cov
+pnpm run test:e2e
+```
+
+## API Test Client
+
+A separate test app exists at `api-test-client`.
+
+```bash
+cd api-test-client
+npm install
+npm run dev
+```
+
+Default URL: `http://localhost:5173`
+
+Expected envs for client:
+
+- `VITE_GOOGLE_CLIENT_ID`
+- `VITE_API_BASE_URL` (example: `http://localhost:3000`)
+- `VITE_GOOGLE_LOGIN_PATH` (example: `/auth/google`)
 
 ## License
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+UNLICENSED
